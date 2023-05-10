@@ -1,0 +1,42 @@
+Steps:
+
+1. AWS side Create VPC, Subnets, IGW, route table and EC2(SSH, TCP, ICMP)
+2. on-premises Create VPC, Subnets, IGW, route table and EC2(SSH, TCP, ICMP)
+3. AWS side create virtual private gateway
+4. AWS side create customer gateway
+5. AWS side create site-to-site VPN connection
+6. change AWS side route table entry and mention gateway entry
+7. Don't know about yet download configuration file
+8. mention this user data script on user side 
+	sudo su
+	yum install openswan -y
+	vim /etc/ipsec.conf uncheck last hash
+	vim /etc/sysctl.conf
+		net.ipv4.ip_forward = 1
+		net.ipv4.conf.all.accept_redirects = 0
+		net.ipv4.conf.all.send_redirects = 0
+	service network restart
+	vim /etc/ipsec.d/aws-vpn.conf
+		conn Tunnel1
+	        	authby=secret
+      	  	auto=start
+        		left=%defaultroute
+      	  	leftid=Customer end Gateway VPN public IP
+	        	right=AWS Virtual private gateway ID- public IP
+        		type=tunnel
+	        	ikelifetime=8h
+	        	keylife=1h
+	        	phase2alg=aes128-sha1;modp1024
+      	  	ike=aes128-sha1;modp1024
+      	  	keyingtries=%forever
+        		keyexchange=ike
+        		leftsubnet=Customer end VPN CIDR
+        		rightsubnet=AWS end VPN CIDR
+        		dpddelay=10
+      		dpdtimeout=30
+	     		dpdaction=restart_by_peer
+	vim /etc/ipsec.d/aws-vpn.secrets
+		customer_public_ip aws_vgw_public_ip: PSK "shared secret"
+	chkconfig ipsec on
+	service ipsec start
+	service ipsec status
